@@ -60,6 +60,7 @@ EOT;
     case "Automatic":
         print <<< EOT
         <option selected> Automatic </option>
+        <option > Web </option>
         <option > On </option>
         <option > Off </option>
 EOT;
@@ -67,6 +68,7 @@ EOT;
     case "On":
         print <<< EOT
         <option > Automatic </option>
+        <option > Web </option>
         <option selected> On </option>
         <option > Off </option>
 EOT;
@@ -74,8 +76,17 @@ EOT;
     case "Off":
         print <<< EOT
         <option > Automatic </option>
+        <option > Web </option>
         <option > On </option>
         <option selected> Off </option>
+EOT;
+        break;
+    case "Web":
+        print <<< EOT
+        <option > Automatic </option>
+        <option selected> Web </option>
+        <option > On </option>
+        <option > Off </option>
 EOT;
 
 };
