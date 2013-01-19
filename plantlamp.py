@@ -7,7 +7,7 @@ from HTMLParser import HTMLParser
 import urllib
 import os
 import re
-
+import RPi.GPIO as GPIO
 Config = ConfigParser.ConfigParser()
 LAMP_ONE = 7
 ON_WEEKDAY = "7:30"
@@ -39,12 +39,12 @@ def __init__():
     RPI_ON = module_exists("RPi")
     LAMP_ONE = Lamp(LAMP_ONE, RPI_ON)
     LOGGER = Logger(LOGFILE, "Main")
-    if RPI_ON:
-        import RPi.GPIO as GPIO
-        GPIO.setmode(GPIO.BOARD)
-        GPIO.setup(7, GPIO.OUT)
-    else:
-        print "NO RPI Present"
+    # if RPI_ON:
+    #     import RPi.GPIO as GPIO
+    #     GPIO.setmode(GPIO.BOARD)
+    #     GPIO.setup(7, GPIO.OUT)
+    # else:
+    #     print "NO RPI Present"
 
 
 def print_conf():
@@ -96,27 +96,27 @@ class Lamp:
         self.logger = Logger(LOGFILE, "Lamp{0}".format(pin))
         self.pin = pin
         self.rpi_present = rpi_present
-        self.RPi = __import__("RPi")
 
 
     def _set(self,output):
+        global GPIO
         if self.rpi_present:
             self.logger.log("was set {1\n".format( self.pin, output))
-            self.RPi.GPIO.output(self.pin, output)
+            GPIO.output(self.pin, output)
 
     def state(self):
         if self.rpi_present:
-            return self.GPIO.input(self.pin)
+            return GPIO.input(self.pin)
         else:
             return False
 
     def set_on(self):
         if not self.state():
-            self._set(self.RPi.GPIO.HIGH)
+            self._set(GPIO.HIGH)
 
     def set_off(self):
         if self.state():
-            self._set(self.RPi.GPIO.LOW)
+            self._set(GPIO.LOW)
 
     def toggle(self):
         if self.state():
