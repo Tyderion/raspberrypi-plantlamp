@@ -99,25 +99,23 @@ class Lamp:
 
 
     def _set(self,output):
-        global GPIO
         if self.rpi_present:
             self.logger.log("was set {1\n".format( self.pin, output))
-            GPIO.output(self.pin, output)
+            RPi.GPIO.output(self.pin, output)
 
     def state(self):
-        global GPIO
         if self.rpi_present:
-            return GPIO.input(self.pin)
+            return RPi.GPIO.input(self.pin)
         else:
             return False
 
     def set_on(self):
         if not self.state():
-            self._set(GPIO.HIGH)
+            self._set(RPi.GPIO.HIGH)
 
     def set_off(self):
         if self.state():
-            self._set(GPIO.LOW)
+            self._set(RPi.GPIO.LOW)
 
     def toggle(self):
         if self.state():
