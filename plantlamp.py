@@ -80,7 +80,7 @@ class Logger:
         last_line = self._last_line().split("]:")
         if last_line[0] != "":
             last_log = datetime.strptime(last_line[0][1:], "%d.%m.%y %H:%M")
-        if last_line[0] == "" or not last_line[1].strip().startswith(self.prefix) or (datetime.today() - last_log).total_seconds() > 600:
+        if last_line[0] == "" or not last_line[1].strip().startswith(self.prefix) or (datetime.today() - last_log).total_seconds() > 5*3600:
                 with open(self.logfile_path, "a") as logfile:
                     logfile.write("[{0}]: {1} {2}".format(
                         datetime.today().strftime("%d.%m.%y %H:%M"),
@@ -95,7 +95,7 @@ class Lamp:
         self.pin = pin
         self.rpi_present = rpi_present
         RPi.GPIO.setmode(RPi.GPIO.BOARD)
-        RPi.GPIO.setup(7, RPi.GPIO.OUT)
+        RPi.GPIO.setup(self.pin, RPi.GPIO.OUT)
 
 
     def _set(self,output):
