@@ -96,6 +96,8 @@ class Lamp:
         self.logger = Logger(LOGFILE, "Lamp{0}".format(pin))
         self.pin = pin
         self.rpi_present = rpi_present
+        RPi.GPIO.setmode(RPi.GPIO.BOARD)
+        RPi.GPIO.setup(7, RPi.GPIO.OUT)
 
 
     def _set(self,output):
