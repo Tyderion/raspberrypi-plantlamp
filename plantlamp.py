@@ -80,8 +80,9 @@ class Logger:
 
     def log(self, string):
         last_line = self._last_line().split("]:")
-        last_log = datetime.strptime(last_line[0][1:], "%d.%m.%y %H:%M")
-        if not last_line[1].strip().startswith(self.prefix) or (datetime.today() - last_log).total_seconds() > 600:
+        if last_line[0] != "":
+            last_log = datetime.strptime(last_line[0][1:], "%d.%m.%y %H:%M")
+        if last_line[0] == "" or not last_line[1].strip().startswith(self.prefix) or (datetime.today() - last_log).total_seconds() > 600:
                 with open(self.logfile_path, "a") as logfile:
                     logfile.write("[{0}]: {1} {2}".format(
                         datetime.today().strftime("%d.%m.%y %H:%M"),
