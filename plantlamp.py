@@ -76,11 +76,12 @@ class Logger:
         return line
 
     def log(self, string):
-        last_line = self._last_line().split("]:")
-        if last_line[0] != "":
-            last_log = datetime.strptime(last_line[0][1:], "%d.%m.%y %H:%M")
+        if self._last_line() != "":
+            last_line = self._last_line().split("]:")
+            if last_line[0] != "":
+                last_log = datetime.strptime(last_line[0][1:], "%d.%m.%y %H:%M")
         log_string = "{0} {1}".format(self.prefix, string)
-        if last_line[0] == "" or last_line[1].strip() != log_string or (datetime.today() - last_log).total_seconds() > 5*3600:
+        if self._last_line() == "" or last_line[1].strip() != log_string or (datetime.today() - last_log).total_seconds() > 5*3600:
                 with open(self.logfile_path, "a") as logfile:
                     logfile.write("[{0}]: {1}".format(
                         datetime.today().strftime("%d.%m.%y %H:%M"),
