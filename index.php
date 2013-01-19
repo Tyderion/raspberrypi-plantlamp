@@ -101,7 +101,7 @@ print <<< EOT
 <div id="log">
 EOT;
 $lastLines = `tail -n 10 plant.log`;
-print $lastLines;
+print str_replace("\n", "<br />",$lastLines);
 print "</div>";
 ?>
 </body>
