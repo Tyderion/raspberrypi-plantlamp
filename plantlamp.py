@@ -90,30 +90,33 @@ class Logger:
 
 
 class Lamp:
+
     def __init__(self, pin, rpi_present=True):
         global LOGFILE
         self.logger = Logger(LOGFILE, "Lamp{0}".format(pin))
         self.pin = pin
         self.rpi_present = rpi_present
+        self.RPi = __import__("RPi")
+
 
     def _set(self,output):
         if self.rpi_present:
             self.logger.log("was set {1\n".format( self.pin, output))
-            GPIO.output(self.pin, output)
+            self.RPi.GPIO.output(self.pin, output)
 
     def state(self):
         if self.rpi_present:
-            return GPIO.input(self.pin)
+            return self.GPIO.input(self.pin)
         else:
             return False
 
     def set_on(self):
         if not self.state():
-            self._set(GPIO.HIGH)
+            self._set(self.RPi.GPIO.HIGH)
 
     def set_off(self):
         if self.state():
-            self._set(GPIO.LOW)
+            self._set(self.RPi.GPIO.LOW)
 
     def toggle(self):
         if self.state():
