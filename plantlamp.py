@@ -41,8 +41,6 @@ def __init__():
     LOGGER = Logger(LOGFILE, "Main")
     if RPI_ON:
         import RPi.GPIO
-        GPIO.setmode(GPIO.BOARD)
-        GPIO.setup(7, GPIO.OUT)
     else:
         print "NO RPI Present"
 
