@@ -29,18 +29,17 @@ def module_exists(module_name):
     else:
         return True
 
-if module_exists("RPi.GPIO as GPIO"):
-    RPI_ON = True
-    GPIO.setmode(GPIO.BOARD)
-    GPIO.setup(7, GPIO.OUT)
-
-def module_exists(module_name):
-    try:
-        __import__(module_name)
-    except ImportError:
-        return False
+def __init__():
+    global RPI_ON
+    RPI_ON =  module_exists("RPi")
+    if RPI_ON:
+        import RPi.GPIO as GPIO
+        GPIO.setmode(GPIO.BOARD)
+        GPIO.setup(7, GPIO.OUT)
     else:
-        return True
+        print "NO RPI Present"
+
+
 
 def print_conf():
     string  = """
@@ -69,6 +68,34 @@ class Logger:
     def log(self, string):
         with open(self.logfile_path, "a") as logfile:
             logfile.write(string)
+
+
+class Lamp:
+    def __init__(self, pin, rpi_present = True):
+        self.pin = pin
+        self.rpi_present = rpi_present
+
+    def _set(self,output):
+        if self.rpi_present:
+            GPIO.output(self.pin, output)
+
+    def state(self):
+        if self.rpi_present:
+            return GPIO.input(self.pin)
+        else:
+            return false
+
+    def set_on(self):
+        self._set(GPIO.HIGH)
+
+    def set_off(self):
+        self._set(GPIO.LOW)
+
+    def toggle(self):
+        if self.state():
+            self.set_on()
+        else:
+            self.set_off()
 
 
 
@@ -111,16 +138,7 @@ class PageGetter(HTMLParser):
 
 
 def read_from_web():
-    # global ON_WEEKDAY, ON_WEEKEND, OFF_WEEKDAY, OFF_WEEKEND
-    t = PageGetter()
-#     if datetime.today().weekday() > 4:
-#         start = datetime.strptime(t.start, "%H:%M")
-#         stop = datetime.strptime(t.stop, "%H:%M")
-#         ON_WEEKDAY = start.time().replace(start.hour + 2).strftime("%H:%M")
-#         OFF_WEEKDAY = stop.time().replace(stop.hour + 2).strftime("%H:%M")
-#     else:
-#         ON_WEEKDAY = t.start
-#         OFF_WEEKDAY = t.stop
+    PageGetter()
 
 
 def readConfig():
@@ -129,10 +147,10 @@ def readConfig():
     if (MODE == "Web"):
         read_from_web()
     else:
-        ON_WEEKDAY = Config.get("Weekday", 'turn_on').replace("\"", "")
-        OFF_WEEKDAY = Config.get("Weekday", 'turn_off').replace("\"", "")
-        ON_WEEKEND = Config.get("Weekend", 'turn_on').replace("\"", "")
-        OFF_WEEKEND = Config.get("Weekend", 'turn_off').replace("\"", "")
+        ON_WEEKDAY = datetime.strptime(Config.get("Weekday", 'turn_on').replace("\"", ""), "%H:%M").time()
+        OFF_WEEKDAY = datetime.strptime(Config.get("Weekday", 'turn_off').replace("\"", ""), "%H:%M").time()
+        ON_WEEKEND = datetime.strptime(Config.get("Weekend", 'turn_on').replace("\"", ""), "%H:%M").time()
+        OFF_WEEKEND = datetime.strptime(Config.get("Weekend", 'turn_off').replace("\"", ""), "%H:%M").time()
     MODE = Config.get("Others", "mode").replace("\"", "")
     LAMP_ON = Config.getboolean("Others", "status")
     LAMP_ONE = 7
@@ -141,13 +159,11 @@ def readConfig():
 def toggle_lamp(LAMP):
     global LAMP_ON, RPI_ON
     if RPI_ON:
-        if LAMP_ON:
+        if GPIO.input(LAMP):
             GPIO.output(LAMP, GPIO.LOW)
-            LAMP_ON = False
             Config.set("Others", "Status", 0)
         else:
             GPIO.output(LAMP, GPIO.HIGH)
-            LAMP_ON = True
             Config.set("Others", "Status", 1)
         Config.write(open("config.ini", 'w'))
 
@@ -155,12 +171,12 @@ def toggle_lamp(LAMP):
 def restore_state(LAMP):
     global LAMP_ON, RPI_ON
     if RPI_ON:
-        if LAMP_ON:
+        if GPIO.input(LAMP):
             GPIO.output(LAMP, GPIO.HIGH)
         else:
             GPIO.output(LAMP, GPIO.LOW)
 
-
+__init__()
 if __name__ == '__main__':
     readConfig()
     restore_state(LAMP_ONE)
@@ -168,21 +184,21 @@ if __name__ == '__main__':
         readConfig()
         if MODE == "Automatic":
             if datetime.today().weekday() > 4:
-                if LAMP_ON:
+                if GPIO.input(LAMP):
                     if checktime(datetime.strptime(OFF_WEEKEND, "%H:%M")):
                         toggle_lamp(LAMP_ONE)
                 else:
                     if checktime(datetime.strptime(ON_WEEKEND, "%H:%M")) and not checktime(datetime.strptime(OFF_WEEKEND, "%H:%M")):
                         toggle_lamp(LAMP_ONE)
             else:
-                if LAMP_ON:
+                if GPIO.input(LAMP):
                     if checktime(datetime.strptime(OFF_WEEKDAY, "%H:%M")):
                         toggle_lamp(LAMP_ONE)
                 else:
                     if checktime(datetime.strptime(ON_WEEKDAY, "%H:%M")) and not checktime(datetime.strptime(OFF_WEEKDAY, "%H:%M")):
                         toggle_lamp(LAMP_ONE)
         elif MODE == "Web":
-            if LAMP_ON:
+            if GPIO.input(LAMP):
                 if checktime(datetime.strptime(OFF_WEEKDAY, "%H:%M")):
                     toggle_lamp(LAMP_ONE)
                 else:
@@ -191,12 +207,10 @@ if __name__ == '__main__':
         elif MODE == "On":
             if RPI_ON:
                 GPIO.output(LAMP_ONE, GPIO.HIGH)
-                LAMP_ON = True
                 Config.set("Others", "Status", 1)
         elif MODE == "Off":
             if RPI_ON:
                 GPIO.output(LAMP_ONE, GPIO.LOW)
-                LAMP_ON = False
                 Config.set("Others", "Status", 0)
         Config.write(open("config.ini", 'w'))
         time.sleep(1)
