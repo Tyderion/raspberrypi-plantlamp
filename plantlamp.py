@@ -5,6 +5,7 @@ import time
 import ConfigParser
 from HTMLParser import HTMLParser
 import urllib
+import os
 import re
 
 Config = ConfigParser.ConfigParser()
@@ -18,8 +19,11 @@ OFF_TODAY = ""
 WEEKEND_OFFSET = 2
 MODE = "Automatic"
 LOGFILE = "plant.log"
+LAST_UPDATE = None
 LAMP_ON = False
 RPI_ON = False
+LOGGER = None
+
 
 def module_exists(module_name):
     try:
@@ -29,9 +33,12 @@ def module_exists(module_name):
     else:
         return True
 
+
 def __init__():
-    global RPI_ON
-    RPI_ON =  module_exists("RPi")
+    global RPI_ON, LAMP_ONE, LOGGER
+    RPI_ON = module_exists("RPi")
+    LAMP_ONE = Lamp(LAMP_ONE, RPI_ON)
+    LOGGER = Logger(LOGFILE)
     if RPI_ON:
         import RPi.GPIO as GPIO
         GPIO.setmode(GPIO.BOARD)
@@ -40,9 +47,8 @@ def __init__():
         print "NO RPI Present"
 
 
-
 def print_conf():
-    string  = """
+    string = """
     LAMP_ONE = {0}
     ON_WEEKDAY = {1}
     OFF_WEEKDAY = {2}
@@ -51,45 +57,62 @@ def print_conf():
     ON_TODAY = {5}
     OFF_TODAY = {6}
     WEEKEND_OFFSET = {7}
-    """.format(LAMP_ONE, ON_WEEKDAY, OFF_WEEKDAY, ON_WEEKEND, OFF_WEEKEND, ON_TODAY, OFF_TODAY,WEEKEND_OFFSET)
+    """.format(
+        LAMP_ONE, ON_WEEKDAY, OFF_WEEKDAY, ON_WEEKEND,
+        OFF_WEEKEND, ON_TODAY, OFF_TODAY, WEEKEND_OFFSET)
     print string
-
-def checktime(time):
-    return datetime.today().time() > time.time()
 
 def weekend():
     return datetime.today().weekday() > 4
 
 
 class Logger:
-    def __init__(self, logfile_path):
+    def __init__(self, logfile_path, prefix):
         self.logfile_path = logfile_path
+        self.prefix = prefix
+
+    def _last_line(self):
+        stdin, stdout = os.popen2("tail -n 1 {0}".format(self.logfile_path))
+        stdin.close()
+        line = stdout.readline()
+        stdout.close()
+        return line
 
     def log(self, string):
-        with open(self.logfile_path, "a") as logfile:
-            logfile.write(string)
+        last_line = self._last_line().split("]:")
+        last_log = datetime.strptime(last_line[0][1:], "%d.%m.%y %H:%M")
+        if not last_line[1].strip().startswith(string[:4]) or (datetime.today() - last_log).total_seconds() > 600:
+                with open(self.logfile_path, "a") as logfile:
+                    logfile.write("[{0}]: {1} {2}".format(
+                        datetime.today().strftime("%d.%m.%y %H:%M"),
+                        self.prefix, string))
 
 
 class Lamp:
-    def __init__(self, pin, rpi_present = True):
+    def __init__(self, pin, rpi_present=True):
+        global LOGFILE
+        self.logger = Logger(LOGFILE, "Lamp{0}".format(pin))
         self.pin = pin
         self.rpi_present = rpi_present
 
     def _set(self,output):
         if self.rpi_present:
+            self.logger.log("was set {1\n".format( self.pin, output))
             GPIO.output(self.pin, output)
 
     def state(self):
         if self.rpi_present:
             return GPIO.input(self.pin)
         else:
-            return false
+            return False
 
     def set_on(self):
-        self._set(GPIO.HIGH)
+        if not self.state():
+            self._set(GPIO.HIGH)
 
     def set_off(self):
-        self._set(GPIO.LOW)
+        if self.state():
+            self._set(GPIO.LOW)
 
     def toggle(self):
         if self.state():
@@ -101,7 +124,7 @@ class Lamp:
 
 class PageGetter(HTMLParser):
     def __init__(self):
-        global LOGFILE
+        global  LOGGER
         HTMLParser.__init__(self)
         self.output = False
         connection = urllib.urlopen("http://www.timeanddate.com/worldclock/city.html?n=268")
@@ -110,7 +133,7 @@ class PageGetter(HTMLParser):
         self.pattern = re.compile("([01]?[0-9]|2[0-3]):[0-5][0-9]")
         self.start = None
         self.stop = None
-        self.logger = Logger(LOGFILE)
+        self.logger = LOGGER
         self.feed(page)
 
 
@@ -128,89 +151,66 @@ class PageGetter(HTMLParser):
                     ON_TODAY  = datetime.strptime(match.group(), "%H:%M").time()
                     if weekend():
                         ON_TODAY = ON_TODAY.replace(ON_TODAY.hour + WEEKEND_OFFSET)
-                    self.logger.log("Today is {0} Weekend. ON-Time is: {1}\n".format("a" if weekend() else "no", ON_TODAY))
                 else:
                     OFF_TODAY  = datetime.strptime(match.group(), "%H:%M").time()
                     self.start = None
                     if weekend():
                         OFF_TODAY = OFF_TODAY.replace(OFF_TODAY.hour + WEEKEND_OFFSET)
-                    self.logger.log("Today is {0} Weekend. OFF-Time is: {1}\n".format("a" if weekend() else "no", ON_TODAY))
+                self.logger.log("Page: Today is {0} Weekend. ON-Time is: {1}, OFF-Time is: {2}\n".format("a" if weekend() else "no",ON_TODAY, OFF_TODAY))
 
 
 def read_from_web():
     PageGetter()
 
+def due_state(time_on, time_off):
+    return datetime.today().time() > time_on and datetime.today().time() < time_off
 
-def readConfig():
-    Config.read("config.ini")
-    global LAMP_ONE, ON_WEEKDAY, ON_WEEKEND, OFF_WEEKDAY, OFF_WEEKEND, LAMP_ON, MODE
-    if (MODE == "Web"):
-        read_from_web()
+def update_lamp_state(lamp):
+    global LOGGER
+    read_conf()
+    what_to_set = lamp.state()
+    LOGGER.log("\n")
+    if MODE == "Automatic":
+        LOGGER.log("Mode: Automatic")
+        if weekend():
+            LOGGER.log(" on a Weekend")
+            what_to_set =  due_state(ON_WEEKEND, OFF_WEEKEND)
+        else:
+            LOGGER.log(" on a Weekday")
+            what_to_set =   due_state(ON_WEEKDAY, OFF_WEEKDAY)
+    elif MODE == "Web":
+        LOGGER.log("Mode: Twilight")
+        what_to_set =  due_state(ON_TODAY, OFF_TODAY)
+    elif MODE == "On":
+        LOGGER.log("Mode: On")
+        what_to_set =  True
+    elif MODE == "Off":
+        LOGGER.log("Mode: Off")
+        what_to_set =  False
+    if what_to_set:
+        lamp.set_on()
     else:
-        ON_WEEKDAY = datetime.strptime(Config.get("Weekday", 'turn_on').replace("\"", ""), "%H:%M").time()
-        OFF_WEEKDAY = datetime.strptime(Config.get("Weekday", 'turn_off').replace("\"", ""), "%H:%M").time()
-        ON_WEEKEND = datetime.strptime(Config.get("Weekend", 'turn_on').replace("\"", ""), "%H:%M").time()
-        OFF_WEEKEND = datetime.strptime(Config.get("Weekend", 'turn_off').replace("\"", ""), "%H:%M").time()
+        lamp.set_off()
+
+
+def read_conf():
+    Config.read("config.ini")
+    global LAMP_ONE, ON_WEEKDAY, ON_WEEKEND, OFF_WEEKDAY, OFF_WEEKEND, LAMP_ON, MODE,LAST_UPDATE
+    if LAST_UPDATE is None or (datetime.today()-LAST_UPDATE).total_seconds() > 5*3600:
+        read_from_web()
+        LAST_UPDATE = datetime.today()
+    ON_WEEKDAY = datetime.strptime(Config.get("Weekday", 'turn_on').replace("\"", ""), "%H:%M").time()
+    OFF_WEEKDAY = datetime.strptime(Config.get("Weekday", 'turn_off').replace("\"", ""), "%H:%M").time()
+    ON_WEEKEND = datetime.strptime(Config.get("Weekend", 'turn_on').replace("\"", ""), "%H:%M").time()
+    OFF_WEEKEND = datetime.strptime(Config.get("Weekend", 'turn_off').replace("\"", ""), "%H:%M").time()
     MODE = Config.get("Others", "mode").replace("\"", "")
     LAMP_ON = Config.getboolean("Others", "status")
     LAMP_ONE = 7
 
 
-def toggle_lamp(LAMP):
-    global LAMP_ON, RPI_ON
-    if RPI_ON:
-        if GPIO.input(LAMP):
-            GPIO.output(LAMP, GPIO.LOW)
-            Config.set("Others", "Status", 0)
-        else:
-            GPIO.output(LAMP, GPIO.HIGH)
-            Config.set("Others", "Status", 1)
-        Config.write(open("config.ini", 'w'))
-
-
-def restore_state(LAMP):
-    global LAMP_ON, RPI_ON
-    if RPI_ON:
-        if GPIO.input(LAMP):
-            GPIO.output(LAMP, GPIO.HIGH)
-        else:
-            GPIO.output(LAMP, GPIO.LOW)
-
 __init__()
 if __name__ == '__main__':
-    readConfig()
-    restore_state(LAMP_ONE)
     while True:
-        readConfig()
-        if MODE == "Automatic":
-            if datetime.today().weekday() > 4:
-                if GPIO.input(LAMP):
-                    if checktime(datetime.strptime(OFF_WEEKEND, "%H:%M")):
-                        toggle_lamp(LAMP_ONE)
-                else:
-                    if checktime(datetime.strptime(ON_WEEKEND, "%H:%M")) and not checktime(datetime.strptime(OFF_WEEKEND, "%H:%M")):
-                        toggle_lamp(LAMP_ONE)
-            else:
-                if GPIO.input(LAMP):
-                    if checktime(datetime.strptime(OFF_WEEKDAY, "%H:%M")):
-                        toggle_lamp(LAMP_ONE)
-                else:
-                    if checktime(datetime.strptime(ON_WEEKDAY, "%H:%M")) and not checktime(datetime.strptime(OFF_WEEKDAY, "%H:%M")):
-                        toggle_lamp(LAMP_ONE)
-        elif MODE == "Web":
-            if GPIO.input(LAMP):
-                if checktime(datetime.strptime(OFF_WEEKDAY, "%H:%M")):
-                    toggle_lamp(LAMP_ONE)
-                else:
-                    if checktime(datetime.strptime(ON_WEEKDAY, "%H:%M")) and not checktime(datetime.strptime(OFF_WEEKDAY, "%H:%M")):
-                        toggle_lamp(LAMP_ONE)
-        elif MODE == "On":
-            if RPI_ON:
-                GPIO.output(LAMP_ONE, GPIO.HIGH)
-                Config.set("Others", "Status", 1)
-        elif MODE == "Off":
-            if RPI_ON:
-                GPIO.output(LAMP_ONE, GPIO.LOW)
-                Config.set("Others", "Status", 0)
-        Config.write(open("config.ini", 'w'))
+        read_conf()
+        update_lamp_state(LAMP_ONE)
         time.sleep(1)
