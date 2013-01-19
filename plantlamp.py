@@ -85,7 +85,7 @@ class Logger:
         print "andd logstring is:"
         print unicode(log_string, "utf8")
         print "are they equal? "
-        print unicode(last_line[1].strip(), "utf8") == unicode(log_string, "utf8")
+        print unicode(last_line[1].strip(), "utf8") == unicode(log_string.strip(), "utf8")
         if self._last_line() == "" or last_line[1].strip() != log_string or (datetime.today() - last_log).total_seconds() > 5*3600:
                 with open(self.logfile_path, "a") as logfile:
                     logfile.write("[{0}]: {1}".format(
