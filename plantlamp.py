@@ -7,7 +7,7 @@ from HTMLParser import HTMLParser
 import urllib
 import os
 import re
-import RPi.GPIO
+# import RPi.GPIO
 Config = ConfigParser.ConfigParser()
 LAMP_ONE = 7
 ON_WEEKDAY = "7:30"
@@ -39,12 +39,12 @@ def __init__():
     RPI_ON = module_exists("RPi")
     LAMP_ONE = Lamp(LAMP_ONE, RPI_ON)
     LOGGER = Logger(LOGFILE, "Main")
-    # if RPI_ON:
-    #     import RPi.GPIO as GPIO
-    #     GPIO.setmode(GPIO.BOARD)
-    #     GPIO.setup(7, GPIO.OUT)
-    # else:
-    #     print "NO RPI Present"
+    if RPI_ON:
+        import RPi.GPIO
+        GPIO.setmode(GPIO.BOARD)
+        GPIO.setup(7, GPIO.OUT)
+    else:
+        print "NO RPI Present"
 
 
 def print_conf():
