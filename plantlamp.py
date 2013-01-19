@@ -37,12 +37,9 @@ def module_exists(module_name):
 
 def __init__():
     global RPI_ON, LAMP_ONE, LOGGER
-    RPI_ON = module_exists("RPi")
+    RPI_ON = True
     LOGGER = Logger(LOGFILE, "Main")
-    if RPI_ON:
-        LAMP_ONE = Lamp(LAMP_ONE, RPI_ON)
-    else:
-        print "NO RPI Present"
+    LAMP_ONE = Lamp(LAMP_ONE)
 
 
 def print_conf():
