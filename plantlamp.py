@@ -180,15 +180,15 @@ def update_lamp_state(lamp):
         else:
             string += " on a Weekday";
             what_to_set =   due_state(ON_WEEKDAY, OFF_WEEKDAY);
-        LOGGER.log(string)
+        LOGGER.log(string+"\n")
     elif MODE == "Web":
-        LOGGER.log("Mode: Twilight")
+        LOGGER.log("Mode: Twilight\n")
         what_to_set =  due_state(ON_TODAY, OFF_TODAY)
     elif MODE == "On":
-        LOGGER.log("Mode: On")
+        LOGGER.log("Mode: On\n")
         what_to_set =  True
     elif MODE == "Off":
-        LOGGER.log("Mode: Off")
+        LOGGER.log("Mode: Off\n")
         what_to_set =  False
     if what_to_set:
         lamp.set_on()
