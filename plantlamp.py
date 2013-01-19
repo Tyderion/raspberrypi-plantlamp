@@ -172,13 +172,14 @@ def update_lamp_state(lamp):
     read_conf()
     what_to_set = lamp.state()
     if MODE == "Automatic":
-        LOGGER.log("Mode: Automatic")
+        string = "Mode: Automatic";
         if weekend():
-            LOGGER.log(" on a Weekend")
-            what_to_set =  due_state(ON_WEEKEND, OFF_WEEKEND)
+            string += " on a Weekend";
+            what_to_set =  due_state(ON_WEEKEND, OFF_WEEKEND);
         else:
-            LOGGER.log(" on a Weekday")
-            what_to_set =   due_state(ON_WEEKDAY, OFF_WEEKDAY)
+            string += " on a Weekday";
+            what_to_set =   due_state(ON_WEEKDAY, OFF_WEEKDAY);
+        LOGGER.log(string)
     elif MODE == "Web":
         LOGGER.log("Mode: Twilight")
         what_to_set =  due_state(ON_TODAY, OFF_TODAY)
