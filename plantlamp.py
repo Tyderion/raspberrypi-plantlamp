@@ -171,7 +171,6 @@ def update_lamp_state(lamp):
     global LOGGER
     read_conf()
     what_to_set = lamp.state()
-    LOGGER.log("\n")
     if MODE == "Automatic":
         LOGGER.log("Mode: Automatic")
         if weekend():
