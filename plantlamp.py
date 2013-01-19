@@ -40,6 +40,7 @@ def __init__():
     RPI_ON = True
     LOGGER = Logger(LOGFILE, "Main")
     LAMP_ONE = Lamp(LAMP_ONE)
+    print LAMP_ONE
 
 
 def print_conf():
