@@ -11,6 +11,7 @@ import RPi.GPIO
 # import RPi.GPIO
 Config = ConfigParser.ConfigParser()
 LAMP_ONE = 7
+LAMP_ONE_L = None
 ON_WEEKDAY = "7:30"
 OFF_WEEKDAY = "17:30"
 ON_WEEKEND = "9:30"
@@ -36,10 +37,10 @@ def module_exists(module_name):
 
 
 def __init__():
-    global RPI_ON, LAMP_ONE, LOGGER
+    global RPI_ON, LAMP_ONE, LOGGER,LAMP_ONE_L
     RPI_ON = True
     LOGGER = Logger(LOGFILE, "Main")
-    LAMP_ONE = Lamp(LAMP_ONE)
+    LAMP_ONE_L = Lamp(LAMP_ONE)
     print LAMP_ONE
 
 
@@ -196,7 +197,7 @@ def update_lamp_state(lamp):
 
 def read_conf():
     Config.read("config.ini")
-    global LAMP_ONE, ON_WEEKDAY, ON_WEEKEND, OFF_WEEKDAY, OFF_WEEKEND, LAMP_ON, MODE,LAST_UPDATE
+    global LAMP_ONE, ON_WEEKDAY, ON_WEEKEND, OFF_WEEKDAY, OFF_WEEKEND, LAMP_ON, MODE,LAST_UPDATE, LAMP_ONE_L
     if LAST_UPDATE is None or (datetime.today()-LAST_UPDATE).total_seconds() > 5*3600:
         read_from_web()
         LAST_UPDATE = datetime.today()
@@ -213,5 +214,5 @@ __init__()
 if __name__ == '__main__':
     while True:
         read_conf()
-        update_lamp_state(LAMP_ONE)
+        update_lamp_state(LAMP_ONE_L)
         time.sleep(1)
