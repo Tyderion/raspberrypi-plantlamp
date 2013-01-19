@@ -100,7 +100,7 @@ class Lamp:
 
     def _set(self,output):
         if self.rpi_present:
-            self.logger.log("was set {1\n".format( self.pin, output))
+            self.logger.log("was set {1}\n".format( self.pin, output))
             RPi.GPIO.output(self.pin, output)
 
     def state(self):
