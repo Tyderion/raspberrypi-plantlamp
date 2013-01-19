@@ -38,7 +38,7 @@ def __init__():
     global RPI_ON, LAMP_ONE, LOGGER
     RPI_ON = module_exists("RPi")
     LAMP_ONE = Lamp(LAMP_ONE, RPI_ON)
-    LOGGER = Logger(LOGFILE)
+    LOGGER = Logger(LOGFILE, "Main")
     if RPI_ON:
         import RPi.GPIO as GPIO
         GPIO.setmode(GPIO.BOARD)
@@ -81,7 +81,7 @@ class Logger:
     def log(self, string):
         last_line = self._last_line().split("]:")
         last_log = datetime.strptime(last_line[0][1:], "%d.%m.%y %H:%M")
-        if not last_line[1].strip().startswith(string[:4]) or (datetime.today() - last_log).total_seconds() > 600:
+        if not last_line[1].strip().startswith(self.prefix) or (datetime.today() - last_log).total_seconds() > 600:
                 with open(self.logfile_path, "a") as logfile:
                     logfile.write("[{0}]: {1} {2}".format(
                         datetime.today().strftime("%d.%m.%y %H:%M"),
@@ -124,7 +124,7 @@ class Lamp:
 
 class PageGetter(HTMLParser):
     def __init__(self):
-        global  LOGGER
+        global  LOGFILE
         HTMLParser.__init__(self)
         self.output = False
         connection = urllib.urlopen("http://www.timeanddate.com/worldclock/city.html?n=268")
@@ -133,7 +133,7 @@ class PageGetter(HTMLParser):
         self.pattern = re.compile("([01]?[0-9]|2[0-3]):[0-5][0-9]")
         self.start = None
         self.stop = None
-        self.logger = LOGGER
+        self.logger = Logger(LOGFILE, "PageGetter")
         self.feed(page)
 
 
@@ -156,7 +156,7 @@ class PageGetter(HTMLParser):
                     self.start = None
                     if weekend():
                         OFF_TODAY = OFF_TODAY.replace(OFF_TODAY.hour + WEEKEND_OFFSET)
-                self.logger.log("Page: Today is {0} Weekend. ON-Time is: {1}, OFF-Time is: {2}\n".format("a" if weekend() else "no",ON_TODAY, OFF_TODAY))
+                self.logger.log("Today is {0} Weekend. ON-Time is: {1}, OFF-Time is: {2}\n".format("a" if weekend() else "no",ON_TODAY, OFF_TODAY))
 
 
 def read_from_web():

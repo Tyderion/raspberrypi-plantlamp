@@ -98,7 +98,11 @@ print <<< EOT
   <label for="secret_confirmation"> Confirmation </label> <input type="password" name="secret_confirmation" /> <br />
   <input type="submit" value="Submit" />
 </form>
-EOT
+<div id="log">
+EOT;
+$lastLines = `tail -n 10 plant.log`;
+print lastLines;
+print "</div>";
 ?>
 </body>
 </html>
