@@ -80,7 +80,8 @@ class Logger:
         if last_line[0] != "":
             last_log = datetime.strptime(last_line[0][1:], "%d.%m.%y %H:%M")
         log_string = "{0} {1}".format(self.prefix, string)
-        print "last_line[1].strip() is '{0}'' and logstring is: '{0}'".format(last_line[1].strip(), log_string)
+        print "last_line[1].strip() is '{0}' and logstring is: '{0}'".format(last_line[1].strip(), log_string)
+        print "are they equal? {0}".format(last_line[1].strip() == log_string)
         if self._last_line() == "" or last_line[1].strip() != log_string or (datetime.today() - last_log).total_seconds() > 5*3600:
                 with open(self.logfile_path, "a") as logfile:
                     logfile.write("[{0}]: {1}".format(
